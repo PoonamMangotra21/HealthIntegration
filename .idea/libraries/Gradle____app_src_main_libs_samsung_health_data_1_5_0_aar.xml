@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="Gradle: ./app/src/main/libs/samsung-health-data-1.5.0.aar">
+    <CLASSES>
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-2/files-2.1/8aaed444f0cacdddeb7d4fd3ca57116a/jetified-samsung-health-data-1.5.0/res" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-2/files-2.1/3ac2878bbc54fd4e8fdbb0ac9b11c71d/jetified-samsung-health-data-1.5.0/res" />
+      <root url="jar://$USER_HOME$/.gradle/caches/transforms-2/files-2.1/3ac2878bbc54fd4e8fdbb0ac9b11c71d/jetified-samsung-health-data-1.5.0/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-2/files-2.1/3ac2878bbc54fd4e8fdbb0ac9b11c71d/jetified-samsung-health-data-1.5.0/AndroidManifest.xml" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
