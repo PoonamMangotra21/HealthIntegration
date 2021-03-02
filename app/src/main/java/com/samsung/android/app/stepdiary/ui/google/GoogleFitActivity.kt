@@ -3,17 +3,22 @@ package com.samsung.android.app.stepdiary.ui.google
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.widget.TextView
 import androidx.lifecycle.Observer
+import com.google.android.gms.fitness.data.DataSource
+import com.google.android.gms.fitness.data.DataType
 import com.google.android.material.snackbar.Snackbar
 import com.samsung.android.app.stepdiary.BuildConfig
 import com.samsung.android.app.stepdiary.R
 import com.samsung.android.app.stepdiary.googlefit.FitActionRequestCode
 import com.samsung.android.app.stepdiary.googlefit.GoogleFitConnectHelper
 import com.samsung.android.app.stepdiary.ui.base.BaseActivity
+import java.util.*
+import java.util.concurrent.TimeUnit
 
 class GoogleFitActivity : BaseActivity() {
 
@@ -29,12 +34,18 @@ class GoogleFitActivity : BaseActivity() {
 
         // initializeLogging()
         googleFitConnectHelper?.checkPermissionsAndRun(FitActionRequestCode.SUBSCRIBE)
-        googleFitConnectHelper?.totalHeartPoints?.observe(this, Observer {
+      /*  googleFitConnectHelper?.totalHeartPoints?.observe(this, Observer {
             findViewById<TextView>(R.id.total_heart_rate).text = "$it"
-        })
-        googleFitConnectHelper?.totalSteps?.observe(this, Observer {
-            findViewById<TextView>(R.id.total_step_count).text = "$it"
-        })
+        })*/
+
+        val editText = findViewById<TextView>(R.id.weightET)
+
+        findViewById<TextView>(R.id.addWH).setOnClickListener {
+            if (!editText.text.isNullOrEmpty()){
+                googleFitConnectHelper?.insertWeight(editText.text.toString().toFloat())
+                editText.text = ""
+            }
+        }
 
         findViewById<TextView>(R.id.text_heart).setOnClickListener {
             googleFitConnectHelper?.checkPermissionsAndRun(FitActionRequestCode.HEART_RATE)
@@ -42,6 +53,14 @@ class GoogleFitActivity : BaseActivity() {
 
         findViewById<TextView>(R.id.text_desc).setOnClickListener {
             googleFitConnectHelper?.checkPermissionsAndRun(FitActionRequestCode.STEP_COUNT)
+        }
+
+        findViewById<TextView>(R.id.text_height).setOnClickListener {
+            googleFitConnectHelper?.checkPermissionsAndRun(FitActionRequestCode.HEIGHT)
+        }
+
+        findViewById<TextView>(R.id.text_weight).setOnClickListener {
+            googleFitConnectHelper?.checkPermissionsAndRun(FitActionRequestCode.WEIGHT)
         }
     }
 

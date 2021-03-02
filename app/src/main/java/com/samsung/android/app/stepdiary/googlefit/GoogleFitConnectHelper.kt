@@ -3,36 +3,52 @@ package com.samsung.android.app.stepdiary.googlefit
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import androidx.core.app.ActivityCompat
-import androidx.lifecycle.MutableLiveData
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.fitness.Fitness
 import com.google.android.gms.fitness.FitnessOptions
-import com.google.android.gms.fitness.data.DataType
-import com.google.android.gms.fitness.data.Field
-import com.google.android.gms.fitness.data.HealthDataTypes.AGGREGATE_BLOOD_GLUCOSE_SUMMARY
+import com.google.android.gms.fitness.data.*
+import com.google.android.gms.fitness.data.Field.FIELD_MEAL_TYPE
+import com.google.android.gms.fitness.data.Field.MEAL_TYPE_BREAKFAST
 import com.google.android.gms.fitness.data.HealthDataTypes.TYPE_BLOOD_GLUCOSE
+import com.google.android.gms.fitness.data.HealthDataTypes.TYPE_BLOOD_PRESSURE
+import com.google.android.gms.fitness.data.HealthFields.*
 import com.google.android.gms.fitness.request.DataReadRequest
+import com.google.android.gms.fitness.result.DataReadResponse
+import com.samsung.android.app.stepdiary.util.CalendarHelper
+import java.text.DateFormat
+import java.text.DateFormat.getTimeInstance
+import java.util.concurrent.TimeUnit
 
 
 enum class FitActionRequestCode {
     SUBSCRIBE,
     STEP_COUNT,
-    HEART_RATE
+    HEART_RATE,
+    WEIGHT,
+    HEIGHT
 }
 
 const val TAG = "GoogleFitConnectHelper"
 
 class GoogleFitConnectHelper(private val activity: Activity) {
 
-    var totalSteps: MutableLiveData<Int>? = MutableLiveData()
-    var totalHeartPoints: MutableLiveData<Float>? = MutableLiveData()
 
     private val fitnessOptions = FitnessOptions.builder()
-            .addDataType(DataType.TYPE_STEP_COUNT_CUMULATIVE)
-            .addDataType(DataType.TYPE_STEP_COUNT_DELTA)
-            .addDataType(DataType.TYPE_HEART_POINTS)
+            .addDataType(DataType.TYPE_STEP_COUNT_CUMULATIVE,FitnessOptions.ACCESS_READ)
+            .addDataType(DataType.TYPE_STEP_COUNT_CUMULATIVE,FitnessOptions.ACCESS_WRITE)
+            .addDataType(DataType.TYPE_STEP_COUNT_DELTA,FitnessOptions.ACCESS_READ)
+            .addDataType(DataType.TYPE_STEP_COUNT_DELTA,FitnessOptions.ACCESS_WRITE)
+            .addDataType(DataType.TYPE_HEART_POINTS,FitnessOptions.ACCESS_READ)
+            .addDataType(DataType.TYPE_HEART_POINTS,FitnessOptions.ACCESS_WRITE)
+            .addDataType(DataType.TYPE_WEIGHT,FitnessOptions.ACCESS_WRITE)
+            .addDataType(DataType.TYPE_HEIGHT,FitnessOptions.ACCESS_WRITE)
+            .addDataType(TYPE_BLOOD_GLUCOSE,FitnessOptions.ACCESS_READ)
+            .addDataType(TYPE_BLOOD_GLUCOSE,FitnessOptions.ACCESS_WRITE)
+            .addDataType(TYPE_BLOOD_PRESSURE,FitnessOptions.ACCESS_READ)
+            .addDataType(TYPE_BLOOD_PRESSURE,FitnessOptions.ACCESS_WRITE)
             .build()
 
     internal fun checkPermissionsAndRun(fitActionRequestCode: FitActionRequestCode) {
@@ -75,6 +91,8 @@ class GoogleFitConnectHelper(private val activity: Activity) {
     internal fun performActionForRequestCode(requestCode: FitActionRequestCode) = when (requestCode) {
         FitActionRequestCode.STEP_COUNT -> readStepCountData()
         FitActionRequestCode.HEART_RATE -> readHeartPoints()
+        FitActionRequestCode.HEIGHT -> readHeight()
+        FitActionRequestCode.WEIGHT -> readWeight()
         FitActionRequestCode.SUBSCRIBE -> subscribe()
     }
 
@@ -113,81 +131,142 @@ class GoogleFitConnectHelper(private val activity: Activity) {
                 }
     }
 
-    /**
-     * Reads the current daily step total, computed from midnight of the current day on the device's
-     * current timezone.
-     */
+    private fun readStepCountData() {
+        ReadData.accessData(activity,getGoogleAccount(),DataType.TYPE_STEP_COUNT_DELTA,Field.FIELD_STEPS).toInt()
+    }
+
     private fun readHeartPoints() {
+        ReadData.accessData(activity,getGoogleAccount(),DataType.TYPE_HEART_POINTS,Field.FIELD_INTENSITY).toFloat()
+    }
+
+    private fun readWeight(){
+        ReadData.accessData(activity,getGoogleAccount(),DataType.TYPE_WEIGHT,Field.FIELD_MIN).toFloat()
+        ReadData.accessData(activity,getGoogleAccount(),DataType.TYPE_WEIGHT,Field.FIELD_AVERAGE).toFloat()
+        ReadData.accessData(activity,getGoogleAccount(),DataType.TYPE_WEIGHT,Field.FIELD_MAX).toFloat()
+    }
+
+    private fun readHeight(){
+        ReadData.accessData(activity,getGoogleAccount(),DataType.TYPE_HEIGHT,Field.FIELD_MIN).toFloat()
+        ReadData.accessData(activity,getGoogleAccount(),DataType.TYPE_HEIGHT,Field.FIELD_AVERAGE).toFloat()
+        ReadData.accessData(activity,getGoogleAccount(),DataType.TYPE_HEIGHT,Field.FIELD_MAX).toFloat()
+    }
+
+    fun insertWeight(value: Float){
+        InsertData.insertHeightWeight(activity,getGoogleAccount(),DataType.TYPE_WEIGHT,value)
+    }
+
+    fun insertHeight(value : Float){
+        InsertData.insertHeightWeight(activity,getGoogleAccount(),DataType.TYPE_HEIGHT,value)
+    }
+
+    fun insertSteps(value: Int){
+        InsertData.insertStepsCount(activity,getGoogleAccount(),DataType.TYPE_STEP_COUNT_DELTA,value)
+    }
+
+    fun writeGlucose(){
+        val startTime: Long = CalendarHelper.getStartTime()
+        val dataSource: DataSource = DataSource.Builder()
+                .setAppPackageName(activity)
+                .setDataType(TYPE_BLOOD_GLUCOSE)
+                .setType(DataSource.TYPE_RAW)
+                .build()
+        val bloodGlucose = DataPoint.builder(dataSource)
+                .setTimestamp(startTime, TimeUnit.MILLISECONDS)
+                .setField(FIELD_BLOOD_GLUCOSE_LEVEL, 5.0f) // 90 mg/dL
+                .setField(FIELD_TEMPORAL_RELATION_TO_MEAL, FIELD_TEMPORAL_RELATION_TO_MEAL_BEFORE_MEAL)
+                .setField(FIELD_MEAL_TYPE, MEAL_TYPE_BREAKFAST)
+                .setField(FIELD_TEMPORAL_RELATION_TO_SLEEP, TEMPORAL_RELATION_TO_SLEEP_ON_WAKING)
+                .setField(FIELD_BLOOD_GLUCOSE_SPECIMEN_SOURCE, BLOOD_GLUCOSE_SPECIMEN_SOURCE_CAPILLARY_BLOOD)
+                .build()
+        val dataSet = DataSet.builder(dataSource)
+                .add(bloodGlucose)
+                .build()
         Fitness.getHistoryClient(activity, getGoogleAccount())
-                .readDailyTotal(DataType.TYPE_HEART_POINTS)
-                .addOnSuccessListener { dataSet ->
-                    val total = when {
-                        dataSet.isEmpty -> 0
-                        else -> dataSet.dataPoints.first().getValue(Field.FIELD_INTENSITY).toString()
-                    }
-                    Log.i(TAG, "Heart Points: $total")
-                    totalHeartPoints?.postValue(total as Float?)
+                .insertData(dataSet)
+                .addOnSuccessListener {
+                    Log.e(TAG, "written successfully")
                 }
-                .addOnFailureListener { e ->
-                    Log.w(TAG, "There was a problem getting the heart points.", e)
+                .addOnFailureListener {
+                    Log.e(TAG, "Exc Reading: $it")
                 }
     }
 
     // create git
-    private fun getHeightWeight(){
-        Fitness.getHistoryClient(activity, getGoogleAccount())
-                .readDailyTotal(DataType.TYPE_WEIGHT) //TYPE_HEIGHT
-                .addOnSuccessListener {dataSet->
-                    Log.i(TAG, "Total steps: ${dataSet.dataPoints.first().getValue(Field.FIELD_AVERAGE)} ${dataSet.dataPoints.first().getValue(Field.FIELD_MIN)} ${dataSet.dataPoints.first().getValue(Field.FIELD_MAX)}")
-                    val total = when {
-                        dataSet.isEmpty -> 0
-                        else -> dataSet.dataPoints.first().getValue(Field.FIELD_AVERAGE).toString() // if Field.FIELD_WEIGHT     java.lang.IllegalArgumentException: weight(f) not a field of DataType{com.google.weight.summary[average(f), max(f), min(f)]}
-                    }
-                }.addOnFailureListener {
-                    Log.e("dataPointE",it.toString())
-                }
-    }
 
-    private fun getBloodGlocose(){
-      /*  val readRequest = DataReadRequest.Builder()
-                .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
-                .aggregate(TYPE_BLOOD_GLUCOSE, AGGREGATE_BLOOD_GLUCOSE_SUMMARY)
-                .bucketByTime(1, TimeUnit.DAYS)
+    private fun getBloodGlucose(){
+        val startTime = CalendarHelper.getStartTime()
+        val endTime: Long = CalendarHelper.getEndTime()
+        val dataSource: DataSource = DataSource.Builder()
+                .setAppPackageName(activity)
+                .setDataType(TYPE_BLOOD_GLUCOSE)
+                .setType(DataSource.TYPE_RAW)
                 .build()
-*/
+        val readRequest = DataReadRequest.Builder() //.aggregate(DataType.TYPE_HEART_RATE_BPM, DataType.AGGREGATE_HEART_RATE_SUMMARY)
+                .aggregate(dataSource)
+                .bucketByTime(1,TimeUnit.DAYS)
+                .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                .build()
 
-    }
-
-    private fun readStepCountData() {
-        Fitness.getHistoryClient(activity, getGoogleAccount())
-                .readDailyTotal(DataType.TYPE_STEP_COUNT_DELTA)
-                .addOnSuccessListener { dataSet ->
-                    val total = when {
-                        dataSet.isEmpty -> 0
-                        else -> dataSet.dataPoints.first().getValue(Field.FIELD_STEPS).asInt()
-                    }
-                    Log.i(TAG, "Total steps: $total")
-                    totalSteps?.value= total
+        Fitness.getHistoryClient(activity,getGoogleAccount())
+                .readData(readRequest)
+                .addOnSuccessListener {
+                    printData(it)
                 }
-                .addOnFailureListener { e ->
-                    Log.w(TAG, "There was a problem getting the step count.", e)
+                .addOnFailureListener {
+                    Log.e("getBloodGlucose",it.toString())
+
                 }
     }
 
     private val runningQOrLater =
-            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
     private fun permissionApproved(): Boolean {
         val approved = if (runningQOrLater) {
             PackageManager.PERMISSION_GRANTED == ActivityCompat.checkSelfPermission(
                     activity,
                     Manifest.permission.ACTIVITY_RECOGNITION)  //Allows an application to recognize physical activity. for apps that need to detect the user's step count or classify the user's physical activity, such as walking, biking, or moving in a vehicle.
-
-
         } else {
             true
         }
         return approved
+    }
+
+    fun printData(dataReadResult: DataReadResponse) {
+        // If the DataReadRequest object specified aggregated data, dataReadResult will be returned
+        // as buckets containing DataSets, instead of just DataSets.
+        Log.v(TAG, "Number of returned buckets of DataSets is: " + dataReadResult.buckets.size)
+        if (dataReadResult.buckets.size > 0) {
+            for (bucket in dataReadResult.buckets) {
+                val dataSets = bucket.dataSets
+                Log.e(TAG, "Datasets: $dataSets")
+                for (dataSet in dataSets) {
+                    dumpDataSet(dataSet)
+                }
+            }
+        } else if (dataReadResult.dataSets.size > 0) {
+            print("Number of returned DataSets is: " + dataReadResult.dataSets.size)
+            for (dataSet in dataReadResult.dataSets) {
+                dumpDataSet(dataSet)
+            }
+        }
+    }
+
+    // [START parse_dataset]
+    private fun dumpDataSet(dataSet: DataSet) {
+        Log.v(TAG, "Name: " + dataSet.dataType.name)
+        Log.v(TAG, "Fields: " + dataSet.dataSource.dataType.fields.size)
+        Log.v(TAG, "Data Point Values :" + dataSet.dataPoints)
+        val dateFormat: DateFormat = getTimeInstance()
+        for (dp in dataSet.dataPoints) {
+            Log.v(TAG, "Data Point:")
+            Log.v(TAG, "Type: " + dataSet.dataType.name)
+            Log.v(TAG, "Start: " + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS)))
+            Log.v(TAG, "End: " + dateFormat.format(dp.getEndTime(TimeUnit.MILLISECONDS)))
+            for (field in dp.dataType.fields) {
+                Log.v(TAG, "Field: " + field.name.toString() + ", Value : " + dp.getValue(field).asFloat())
+            }
+        }
     }
 
     private fun requestRuntimePermissions(requestCode: FitActionRequestCode) {
