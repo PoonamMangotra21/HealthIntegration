@@ -13,7 +13,7 @@
  * Samsung Electronics makes no representations with respect to the contents,
  * and assumes no responsibility for any errors that might appear in the
  * software and documents. This publication and the contents hereof are subject
- * to change without notice.
+ * to change without notice. Nice
  */
 package com.samsung.android.app.stepdiary
 
