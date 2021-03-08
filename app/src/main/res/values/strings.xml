@@ -50,4 +50,5 @@
     <string name="add">Add</string>
     <string name="body_weight">Body Weight</string>
     <string name="body_height">Body Height</string>
+    <string name="glucose">Blood Glucose</string>
 </resources>

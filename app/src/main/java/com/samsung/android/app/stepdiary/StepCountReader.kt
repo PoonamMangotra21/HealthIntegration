@@ -13,7 +13,7 @@
  * Samsung Electronics makes no representations with respect to the contents,
  * and assumes no responsibility for any errors that might appear in the
  * software and documents. This publication and the contents hereof are subject
- * to change without notice. Nice
+ * to change without notice.
  */
 package com.samsung.android.app.stepdiary
 
@@ -24,22 +24,17 @@ import com.samsung.android.app.stepdiary.ui.samsung.StepDiaryActivity.Companion.
 import com.samsung.android.sdk.healthdata.HealthConstants.StepCount
 import com.samsung.android.sdk.healthdata.HealthConstants.StepDailyTrend
 import com.samsung.android.sdk.healthdata.HealthDataResolver
-import com.samsung.android.sdk.healthdata.HealthDataResolver.AggregateRequest
+import com.samsung.android.sdk.healthdata.HealthDataResolver.*
 import com.samsung.android.sdk.healthdata.HealthDataResolver.AggregateRequest.AggregateFunction
 import com.samsung.android.sdk.healthdata.HealthDataResolver.AggregateRequest.TimeGroupUnit
-import com.samsung.android.sdk.healthdata.HealthDataResolver.Filter
-import com.samsung.android.sdk.healthdata.HealthDataResolver.ReadRequest
-import com.samsung.android.sdk.healthdata.HealthDataResolver.SortOrder
 import com.samsung.android.sdk.healthdata.HealthDataStore
 import com.samsung.android.sdk.healthdata.HealthDataUtil
-import java.util.Calendar
-import java.util.Locale
-import java.util.TimeZone
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 class StepCountReader(
-    store: HealthDataStore,
-    private val observer: StepCountObserver
+        store: HealthDataStore,
+        private val observer: StepCountObserver
 ) {
     private val healthDataResolver: HealthDataResolver = HealthDataResolver(store, Handler(Looper.getMainLooper()))
 
@@ -57,86 +52,87 @@ class StepCountReader(
     private fun readStepCount(startTime: Long) {
         // Get sum of step counts by device
         val request = AggregateRequest.Builder()
-            .setDataType(StepCount.HEALTH_DATA_TYPE)
-            .addFunction(AggregateFunction.SUM, StepCount.COUNT, ALIAS_TOTAL_COUNT)
-            .addGroup(StepCount.DEVICE_UUID, ALIAS_DEVICE_UUID)
-            .setLocalTimeRange(StepCount.START_TIME, StepCount.TIME_OFFSET, startTime, startTime + TIME_INTERVAL)
-            .setSort(ALIAS_TOTAL_COUNT, SortOrder.DESC)
-            .build()
+                .setDataType(StepCount.HEALTH_DATA_TYPE)
+                .addFunction(AggregateFunction.SUM, StepCount.COUNT, ALIAS_TOTAL_COUNT)
+                .addGroup(StepCount.DEVICE_UUID, ALIAS_DEVICE_UUID)
+                .setLocalTimeRange(StepCount.START_TIME, StepCount.TIME_OFFSET, startTime, startTime + TIME_INTERVAL)
+                .setSort(ALIAS_TOTAL_COUNT, SortOrder.DESC)
+                .build()
 
         runCatching { healthDataResolver.aggregate(request) }
-            .onFailure { Log.e(TAG, "Getting step count fails.", it) }
-            .getOrNull()
-            ?.setResultListener {
-                it.use {
-                    it.firstOrNull()
-                        .also { observer.onChanged(it?.getInt(ALIAS_TOTAL_COUNT) ?: 0) }
-                        ?.let { readStepCountBinning(startTime, it.getString(ALIAS_DEVICE_UUID)) }
-                        ?: observer.onBinningDataChanged(emptyList())
+                .onFailure { Log.e(TAG, "Getting step count fails.", it) }
+                .getOrNull()
+                ?.setResultListener {
+                    it.use {
+                        it.firstOrNull()
+                                .also { observer.onChanged(it?.getInt(ALIAS_TOTAL_COUNT) ?: 0) }
+                                ?.let { readStepCountBinning(startTime, it.getString(ALIAS_DEVICE_UUID)) }
+                                ?: observer.onBinningDataChanged(emptyList())
+                    }
                 }
-            }
     }
 
     private fun readStepDailyTrend(dayStartTime: Long) {
         val request = ReadRequest.Builder()
-            .setDataType(StepDailyTrend.HEALTH_DATA_TYPE)
-            .setProperties(arrayOf(StepDailyTrend.COUNT, StepDailyTrend.BINNING_DATA))
-            .setFilter(Filter.and(
-                Filter.eq(StepDailyTrend.DAY_TIME, dayStartTime),
-                Filter.eq(StepDailyTrend.SOURCE_TYPE, StepDailyTrend.SOURCE_TYPE_ALL)))
-            .build()
+                .setDataType(StepDailyTrend.HEALTH_DATA_TYPE)
+                .setProperties(arrayOf(StepDailyTrend.COUNT, StepDailyTrend.BINNING_DATA))
+                .setFilter(Filter.and(
+                        Filter.eq(StepDailyTrend.DAY_TIME, dayStartTime),
+                        Filter.eq(StepDailyTrend.SOURCE_TYPE, StepDailyTrend.SOURCE_TYPE_ALL)))
+                .build()
 
         runCatching { healthDataResolver.read(request) }
-            .onFailure { Log.e(TAG, "Getting daily step trend fails.", it) }
+                .onFailure { Log.e(TAG, "Getting daily step trend fails.", it) }
                 //    java.lang.SecurityException: com.samsung.android.app.stepdiary does not match with registered signature. B4:48:B7:30:99
-            .getOrNull()
-            ?.setResultListener {
-                it.use {
-                    it.firstOrNull().also {
-                        observer.onChanged(it?.getInt(StepDailyTrend.COUNT) ?: 0)
-                        observer.onBinningDataChanged(
-                            it?.getBlob(StepDailyTrend.BINNING_DATA)?.let { getBinningData(it) } ?: emptyList())
+                .getOrNull()
+                ?.setResultListener {
+                    it.use {
+                        it.firstOrNull().also {
+                            observer.onChanged(it?.getInt(StepDailyTrend.COUNT) ?: 0)
+                            observer.onBinningDataChanged(
+                                    it?.getBlob(StepDailyTrend.BINNING_DATA)?.let { getBinningData(it) }
+                                            ?: emptyList())
+                        }
                     }
                 }
-            }
     }
 
     private fun getBinningData(zip: ByteArray): List<StepBinningData> {
         // decompress ZIP
         val binningDataList = HealthDataUtil.getStructuredDataList(zip, StepBinningData::class.java)
         return binningDataList.asSequence()
-            .withIndex()
-            .filter { it.value.count != 0 }
-            .onEach { it.value.time = String.format(Locale.US, "%02d:%02d", it.index / 6, it.index % 6 * 10) }
-            .map { it.value }
-            .toList()
+                .withIndex()
+                .filter { it.value.count != 0 }
+                .onEach { it.value.time = String.format(Locale.US, "%02d:%02d", it.index / 6, it.index % 6 * 10) }
+                .map { it.value }
+                .toList()
     }
 
     private fun readStepCountBinning(startTime: Long, deviceUuid: String) {
 
         // Get 10 minute binning data of a particular device
         val request = AggregateRequest.Builder()
-            .setDataType(StepCount.HEALTH_DATA_TYPE)
-            .addFunction(AggregateFunction.SUM, StepCount.COUNT, ALIAS_TOTAL_COUNT)
-            .setTimeGroup(TimeGroupUnit.MINUTELY, 10, StepCount.START_TIME, StepCount.TIME_OFFSET, ALIAS_BINNING_TIME)
-            .setLocalTimeRange(StepCount.START_TIME, StepCount.TIME_OFFSET, startTime, startTime + TIME_INTERVAL)
-            .setFilter(Filter.eq(StepCount.DEVICE_UUID, deviceUuid))
-            .setSort(ALIAS_BINNING_TIME, SortOrder.ASC)
-            .build()
+                .setDataType(StepCount.HEALTH_DATA_TYPE)
+                .addFunction(AggregateFunction.SUM, StepCount.COUNT, ALIAS_TOTAL_COUNT)
+                .setTimeGroup(TimeGroupUnit.MINUTELY, 10, StepCount.START_TIME, StepCount.TIME_OFFSET, ALIAS_BINNING_TIME)
+                .setLocalTimeRange(StepCount.START_TIME, StepCount.TIME_OFFSET, startTime, startTime + TIME_INTERVAL)
+                .setFilter(Filter.eq(StepCount.DEVICE_UUID, deviceUuid))
+                .setSort(ALIAS_BINNING_TIME, SortOrder.ASC)
+                .build()
 
         runCatching { healthDataResolver.aggregate(request) }
-            .onFailure { Log.e(TAG, "Getting step binning data fails.", it) }
-            .getOrNull()
-            ?.setResultListener {
-                it.use {
-                    it.asSequence()
-                        .map { it.getString(ALIAS_BINNING_TIME) to it.getInt(ALIAS_TOTAL_COUNT) }
-                        .filter { it.first != null }
-                        .map { StepBinningData(it.first.split(" ")[1], it.second) }
-                        .toList()
+                .onFailure { Log.e(TAG, "Getting step binning data fails.", it) }
+                .getOrNull()
+                ?.setResultListener {
+                    it.use {
+                        it.asSequence()
+                                .map { it.getString(ALIAS_BINNING_TIME) to it.getInt(ALIAS_TOTAL_COUNT) }
+                                .filter { it.first != null }
+                                .map { StepBinningData(it.first.split(" ")[1], it.second) }
+                                .toList()
+                    }
+                            .also { observer.onBinningDataChanged(it) }
                 }
-                    .also { observer.onBinningDataChanged(it) }
-            }
     }
 
     companion object {

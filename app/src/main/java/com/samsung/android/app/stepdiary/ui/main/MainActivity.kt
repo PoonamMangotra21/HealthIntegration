@@ -25,5 +25,5 @@ class MainActivity : BaseActivity() {
 }
 
 private fun BaseActivity.goToActivity(referenceClass: Class<*>) {
-    startActivity(Intent(this,referenceClass))
+    startActivity(Intent(this, referenceClass))
 }

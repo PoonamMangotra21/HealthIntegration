@@ -3,26 +3,26 @@ package com.samsung.android.app.stepdiary.ui.google
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
-import android.widget.TextView
-import androidx.lifecycle.Observer
-import com.google.android.gms.fitness.data.DataSource
-import com.google.android.gms.fitness.data.DataType
+import androidx.activity.viewModels
 import com.google.android.material.snackbar.Snackbar
 import com.samsung.android.app.stepdiary.BuildConfig
 import com.samsung.android.app.stepdiary.R
 import com.samsung.android.app.stepdiary.googlefit.FitActionRequestCode
-import com.samsung.android.app.stepdiary.googlefit.GoogleFitConnectHelper
 import com.samsung.android.app.stepdiary.ui.base.BaseActivity
-import java.util.*
-import java.util.concurrent.TimeUnit
+import com.samsung.android.app.stepdiary.ui.base.BaseViewModelFactory
+import com.samsung.android.app.stepdiary.ui.domain.data.HealthRepoImplementation
+import com.samsung.android.app.stepdiary.ui.domain.framework.GoogleFitHealthImplementation
 
 class GoogleFitActivity : BaseActivity() {
 
-    private var googleFitConnectHelper : GoogleFitConnectHelper ? = null
+    private val googleFitViewModel by viewModels<GoogleFitViewModel> {
+        BaseViewModelFactory {
+            GoogleFitViewModel(HealthRepoImplementation(GoogleFitHealthImplementation()))
+        }
+    }
 
     override fun getContentViewId(): Int {
         return R.layout.activity_google_fit
@@ -30,19 +30,21 @@ class GoogleFitActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        googleFitConnectHelper = GoogleFitConnectHelper(this)
+        googleFitViewModel.setUp(this)
 
-        // initializeLogging()
-        googleFitConnectHelper?.checkPermissionsAndRun(FitActionRequestCode.SUBSCRIBE)
-      /*  googleFitConnectHelper?.totalHeartPoints?.observe(this, Observer {
+        /*  googleFitConnectHelper = GoogleFitConnectHelper(this,fitnessOptions)
+
+          // initializeLogging()
+          googleFitConnectHelper?.checkPermissionsAndRun(FitActionRequestCode.SUBSCRIBE)
+        *//*  googleFitConnectHelper?.totalHeartPoints?.observe(this, Observer {
             findViewById<TextView>(R.id.total_heart_rate).text = "$it"
-        })*/
+        })*//*
 
         val editText = findViewById<TextView>(R.id.weightET)
 
         findViewById<TextView>(R.id.addWH).setOnClickListener {
             if (!editText.text.isNullOrEmpty()){
-                googleFitConnectHelper?.insertWeight(editText.text.toString().toFloat())
+                googleFitConnectHelper?.insertStep(editText.text.toString().toInt())
                 editText.text = ""
             }
         }
@@ -62,6 +64,11 @@ class GoogleFitActivity : BaseActivity() {
         findViewById<TextView>(R.id.text_weight).setOnClickListener {
             googleFitConnectHelper?.checkPermissionsAndRun(FitActionRequestCode.WEIGHT)
         }
+
+        findViewById<TextView>(R.id.text_glucose).setOnClickListener {
+           googleFitConnectHelper?.checkPermissionsAndRun(FitActionRequestCode.GLUCOSE)
+           // googleFitConnectHelper?.writeGlucose()
+        }*/
     }
 
     /**
@@ -74,10 +81,11 @@ class GoogleFitActivity : BaseActivity() {
             RESULT_OK -> {
                 val postSignInAction = FitActionRequestCode.values()[requestCode]
                 postSignInAction.let {
-                    googleFitConnectHelper?.performActionForRequestCode(postSignInAction)
+                    //     googleFitConnectHelper?.performActionForRequestCode(postSignInAction)
                 }
             }
-            else -> googleFitConnectHelper?.oAuthErrorMsg(requestCode, resultCode)
+            else -> {
+            }//googleFitConnectHelper?.oAuthErrorMsg(requestCode, resultCode)
         }
     }
 
@@ -93,7 +101,7 @@ class GoogleFitActivity : BaseActivity() {
                 // Permission was granted.
                 val fitActionRequestCode = FitActionRequestCode.values()[requestCode]
                 fitActionRequestCode.let {
-                    googleFitConnectHelper?.fitSignIn(fitActionRequestCode)
+                    // googleFitConnectHelper?.fitSignIn(fitActionRequestCode)
                 }
             }
             else -> {

@@ -10,20 +10,29 @@ import java.util.concurrent.TimeUnit
 
 object InsertData {
 
-    fun insertHeightWeight(activity:Activity,googleAccount:GoogleSignInAccount, dataType: DataType,value: Float){
-        val dataSource = getValueSource(activity,dataType)
+    fun insertHeightWeight(activity: Activity, googleAccount: GoogleSignInAccount, dataType: DataType, value: Float) {
+        val dataSource = getValueSource(activity, dataType)
 
-        val dataPoint = getValueDataPoint(dataSource,value)
+        val dataPoint = getValueDataPoint(dataSource, value)
 
-        writeToGoogleGit(activity,googleAccount,dataSource,dataPoint)
+        writeToGoogleGit(activity, googleAccount, dataSource, dataPoint)
     }
 
-    fun  insertStepsCount(activity:Activity,googleAccount:GoogleSignInAccount, dataType: DataType,value: Int){
-        val dataSource = getDataSource(activity,dataType)
+    fun insertSteps(activity: Activity, googleAccount: GoogleSignInAccount, dataType: DataType, field: Field, value: Int) {
+        val dataSource = getDataSource(activity, dataType)
 
-        val dataPoint = getStepsDataPoint(dataSource,value)
+        val dataPoint = getStepsDataPoint(dataSource, field, value)
 
-        writeToGoogleGit(activity,googleAccount,dataSource,dataPoint)
+
+        writeToGoogleGit(activity, googleAccount, dataSource, dataPoint)
+    }
+
+    fun insertHP(activity: Activity, googleAccount: GoogleSignInAccount, dataType: DataType, field: Field, value: Float) {
+        val dataSource = getDataSource(activity, dataType)
+
+        val dataPoint = getHPDataPoint(dataSource, field, value)
+
+        writeToGoogleGit(activity, googleAccount, dataSource, dataPoint)
     }
 
     private fun writeToGoogleGit(activity: Activity, googleAccount: GoogleSignInAccount, dataSource: DataSource, dataPoint: DataPoint) {
@@ -41,7 +50,7 @@ object InsertData {
                 }
     }
 
-    private fun getValueSource(activity: Activity, dataType: DataType) : DataSource{
+    private fun getValueSource(activity: Activity, dataType: DataType): DataSource {
         return DataSource.Builder()
                 .setAppPackageName(activity)
                 .setDataType(dataType)
@@ -49,8 +58,8 @@ object InsertData {
                 .build()
     }
 
-    private fun getDataSource(activity: Activity, dataType: DataType) : DataSource{
-       return DataSource.Builder()
+    private fun getDataSource(activity: Activity, dataType: DataType): DataSource {
+        return DataSource.Builder()
                 .setAppPackageName(activity)
                 .setDataType(dataType)
                 .setStreamName("$TAG - step count")
@@ -58,7 +67,7 @@ object InsertData {
                 .build()
     }
 
-    private fun getValueDataPoint(dataSource : DataSource, value: Float) : DataPoint{
+    private fun getValueDataPoint(dataSource: DataSource, value: Float): DataPoint {
         val startTime: Long = CalendarHelper.getStartTime()
         return DataPoint.builder(dataSource)
                 .setTimeInterval(startTime, startTime, TimeUnit.MILLISECONDS)
@@ -66,12 +75,23 @@ object InsertData {
                 .build()
     }
 
-    private fun getStepsDataPoint(dataSource : DataSource, value: Int) : DataPoint{
+    private fun getStepsDataPoint(dataSource: DataSource, field: Field, value: Int): DataPoint {
         val startTime: Long = CalendarHelper.getStartTime()
         val endTime: Long = CalendarHelper.getEndTime()
+        Log.e(TAG, "steps time : $startTime $endTime")
         return DataPoint.builder(dataSource)
-                .setField(Field.FIELD_STEPS, value)
-                .setTimeInterval(startTime, endTime, TimeUnit.SECONDS)
+                .setField(field, value)
+                .setTimeInterval(startTime, endTime, TimeUnit.MILLISECONDS)
+                .build()
+    }
+
+    private fun getHPDataPoint(dataSource: DataSource, field: Field, value: Float): DataPoint {
+        val startTime: Long = CalendarHelper.getStartTime()
+        val endTime: Long = CalendarHelper.getEndTime()
+        Log.e(TAG, "steps time : $startTime $endTime")
+        return DataPoint.builder(dataSource)
+                .setField(field, value)
+                .setTimeInterval(startTime, endTime, TimeUnit.MILLISECONDS)
                 .build()
     }
 }

@@ -6,10 +6,11 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.fitness.Fitness
 import com.google.android.gms.fitness.data.DataType
 import com.google.android.gms.fitness.data.Field
+import com.samsung.android.app.stepdiary.ui.base.showToastMessage
 
 object ReadData {
 
-    fun accessData(activity:Activity,account : GoogleSignInAccount, dataType: DataType, field: Field): String {
+    fun accessData(activity: Activity, account: GoogleSignInAccount, dataType: DataType, field: Field): String {
         var data = "0"
         Fitness.getHistoryClient(activity, account)
                 .readDailyTotal(dataType)
@@ -19,11 +20,14 @@ object ReadData {
                         else -> dataSet.dataPoints.first().getValue(field).toString()
                     }
                     Log.i(TAG, "Data: $total")
+                    "DataType : $dataType Value : $total".showToastMessage(activity)
                     data = total
                 }
                 .addOnFailureListener { e ->
                     Log.w(TAG, "There was a problem getting details", e)
+                    "DataType : $dataType Error : $e".showToastMessage(activity)
                 }
         return data
     }
+
 }
